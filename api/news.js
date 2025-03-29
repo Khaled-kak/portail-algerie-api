@@ -1,28 +1,26 @@
-// api/news.js
-export default async (req, res) => {
-  // Solution temporaire (à remplacer après test)
-  const API_KEY = process.env.GNEWS_API_KEY || "dee563bf7cc2ba0481029c7af0b11ec8";
-  
-  // Debug
-  console.log("Clé API utilisée :", API_KEY?.substring(0, 3) + "...");
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  const { q = "algérie" } = req.query;
+
+  const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(q)}&lang=fr&country=dz&max=10&token=${process.env.GNEWS_API_KEY}`;
 
   try {
-    const url = `https://gnews.io/api/v4/top-headlines?token=${API_KEY}&lang=fr&country=dz`;
     const response = await fetch(url);
     const data = await response.json();
 
-    if (!response.ok) throw new Error(data.message || data.errors?.join(', ') || "Erreur API");
-    
-    return res.status(200).json({
-      success: true,
-      articles: data.articles || []
-    });
-    
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.message || "Erreur API" });
+    }
+
+    return res.status(200).json(data);
   } catch (error) {
-    console.error("ERREUR COMPLÈTE:", error);
-    return res.status(500).json({ 
-      error: "Impossible de charger les actualités",
-      details: process.env.NODE_ENV === "development" ? error.message : undefined
-    });
+    return res.status(500).json({ error: "Erreur serveur", details: error.message });
   }
-};
+}
